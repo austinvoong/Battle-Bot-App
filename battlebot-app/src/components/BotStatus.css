@@ -1,0 +1,28 @@
+/* BotStatus.css */
+.status-container {
+    width: 400px; /* Set a fixed width for the container */
+    padding: 20px; /* Add some padding */
+  }
+  
+  .status-header {
+    font-size: 24px;
+    color: white;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    text-align: left; /* Left-align the header */
+    margin-bottom: 20px; /* Add space below the header */
+  }
+  
+  .status-row {
+    display: flex; /* Use flexbox for layout */
+    justify-content: flex-start; /* Align items to the left */
+  }
+  
+  .status-item {
+    font-size: 12px;
+    color: white;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    margin-right: 20px; /* Space between status items */
+  }
+  
