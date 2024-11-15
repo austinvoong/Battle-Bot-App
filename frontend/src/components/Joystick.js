@@ -1,17 +1,24 @@
+// frontend/src/components/Joystick.js
 import React, { useEffect, useRef, useState } from 'react';
-import '../lib/joy.js'; // Adjust the path based on your folder structure
+import '../lib/joy.js';
 import "./Joystick.css";
 
-const Joystick = () => {
+const Joystick = ({ onUpdate, disabled, flipped }) => {
   const joyDivRef = useRef(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [joystickId] = useState(`joystick-${Math.random().toString(36).substr(2, 9)}`); // Generate unique id
+  const [joystickId] = useState(`joystick-${Math.random().toString(36).substr(2, 9)}`);
+  const joyRef = useRef(null);
 
   useEffect(() => {
     const loadJoystick = () => {
       if (typeof window.JoyStick !== 'undefined') {
-        const joy = new window.JoyStick(joystickId, {}, (stickData) => {
-          setPosition({ x: stickData.x, y: stickData.y });
+        joyRef.current = new window.JoyStick(joystickId, {}, (stickData) => {
+          const x = flipped ? -stickData.x : stickData.x;
+          const y = flipped ? -stickData.y : stickData.y;
+          setPosition({ x, y });
+          if (!disabled) {
+            onUpdate({ x, y });
+          }
         });
 
         return () => {
@@ -23,12 +30,20 @@ const Joystick = () => {
     };
 
     loadJoystick();
-  }, [joystickId]);
+  }, [joystickId, onUpdate, disabled, flipped]);
 
   return (
-    <div>
-      {/* Assign the dynamically generated id */}
-      <div id={joystickId} ref={joyDivRef} style={{ width: '300px', height: '300px', marginBottom: '20px' }}></div>
+    <div className={`joystick-container ${disabled ? 'disabled' : ''}`}>
+      <div 
+        id={joystickId} 
+        ref={joyDivRef} 
+        style={{ 
+          width: '300px', 
+          height: '300px', 
+          marginBottom: '20px',
+          opacity: disabled ? '0.5' : '1'
+        }}
+      ></div>
       <p className="position-text">X Position: {position.x}</p>
       <p className="position-text">Y Position: {position.y}</p>
     </div>

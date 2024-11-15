@@ -1,43 +1,95 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Joystick from "./Joystick.js";
-import "./ControlPanel.css"; // Import the CSS file for styling
+import "./ControlPanel.css";
 
 function ControlPanel() {
-  const [safetyOn, setSafetyOn] = useState(true); // Defaulting to safety on
+  const [safetyOn, setSafetyOn] = useState(true);
   const [flipControls, setFlipControls] = useState(false);
   const [killPower, setPower] = useState(false);
+  const [ws, setWs] = useState(null);
+  const [connected, setConnected] = useState(false);
+
+  // Connect to ESP32 when component mounts
+  useEffect(() => {
+    // Replace with your ESP32's IP address
+    const websocket = new WebSocket('ws://YOUR_ESP32_IP:81');
+
+    websocket.onopen = () => {
+      console.log('Connected to bot');
+      setConnected(true);
+    };
+
+    websocket.onclose = () => {
+      console.log('Disconnected from bot');
+      setConnected(false);
+    };
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setConnected(false);
+    };
+
+    setWs(websocket);
+
+    // Cleanup on unmount
+    return () => {
+      if (websocket) {
+        websocket.close();
+      }
+    };
+  }, []);
 
   const sendCommand = (command) => {
-    console.log(`Sending command: ${command}`);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify(command));
+        console.log(`Sending command:`, command);
+      } catch (e) {
+        console.error('Error sending command:', e);
+      }
+    } else {
+      console.log('WebSocket not connected');
+    }
   };
 
   const handleJoystickUpdate = (position) => {
-    console.log(`Joystick position:`, position);
-    sendCommand(
-      `Move to X: ${position.x}, Y: ${position.y}, Direction: ${position.direction}`
-    );
+    sendCommand({
+      type: "movement",
+      x: position.x,
+      y: position.y
+    });
   };
 
   const handleWeaponAction = () => {
-    sendCommand("Weapon Action Triggered");
+    sendCommand({
+      type: "weapon",
+      active: true
+    });
     console.log("Weapon fired!");
   };
 
   const toggleSafety = () => {
     setSafetyOn(!safetyOn);
-    sendCommand(safetyOn ? "Safety Off" : "Safety On");
+    sendCommand({
+      type: "safety",
+      enabled: !safetyOn
+    });
   };
 
   const toggleFlipControls = () => {
     setFlipControls(!flipControls);
-    sendCommand(flipControls ? "Flip Controls Off" : "Flip Controls On");
+    // This can be handled locally since it's just UI
   };
 
   const togglePower = () => {
     setPower(!killPower);
-    sendCommand(killPower ? "Kill Power Off" : "Kill Power On");
+    sendCommand({
+      type: "power",
+      enabled: !killPower
+    });
   };
 
+  // Keep your original JSX structure
   return (
     <div className="control-panel">
       <h2 className="control-panel-header">Control Panel</h2>

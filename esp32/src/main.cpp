@@ -4,8 +4,8 @@
 #include <ArduinoJson.h>
 
 // WiFi credentials
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid = "Wifi5"; //island
+const char* password = "Password";
 
 // Pin Definitions for Motors
 const int MOTOR_LEFT_FWD = 14;    // GPIO14 - Left drive motor forward
