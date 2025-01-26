@@ -8,7 +8,14 @@ Backend → Frontend: Bot status and connection state
 
 2. Build and deployment:
 
-Set up your environment variables (REACT_APP_WS_URL)
-Build your frontend (npm run build)
-Deploy your backend server
-Flash the ESP32 with the updated MicroPython code
+Frontend Dependencies
+npm install express ws cors http path
+
+Backend Dependencies
+npm install react react-dom
+npm install ws
+npm install @types/ws
+
+Micropython Library
+micropython-asyncio
+micropython-websockets
