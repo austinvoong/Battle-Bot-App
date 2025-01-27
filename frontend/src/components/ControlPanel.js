@@ -1,57 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext } from "react";
 import Joystick from "./Joystick.js";
 import "./ControlPanel.css";
+import { WebSocketContext } from "../App";
 
 function ControlPanel() {
-  const [safetyOn, setSafetyOn] = useState(true);
-  const [flipControls, setFlipControls] = useState(false);
-  const [killPower, setPower] = useState(false);
-  const [ws, setWs] = useState(null);
-  const [connected, setConnected] = useState(false);
-
-  // Connect to ESP32 when component mounts
-  useEffect(() => {
-    // Replace with your ESP32's IP address
-    const websocket = new WebSocket('ws://YOUR_ESP32_IP:81');
-
-    websocket.onopen = () => {
-      console.log('Connected to bot');
-      setConnected(true);
-    };
-
-    websocket.onclose = () => {
-      console.log('Disconnected from bot');
-      setConnected(false);
-    };
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setConnected(false);
-    };
-
-    setWs(websocket);
-
-    // Cleanup on unmount
-    return () => {
-      if (websocket) {
-        websocket.close();
-      }
-    };
-  }, []);
-
-  const sendCommand = (command) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        ws.send(JSON.stringify(command));
-        console.log(`Sending command:`, command);
-      } catch (e) {
-        console.error('Error sending command:', e);
-      }
-    } else {
-      console.log('WebSocket not connected');
-    }
-  };
-
+  const { connected, botStatus, sendCommand } = useContext(WebSocketContext);
+  
   const handleJoystickUpdate = (position) => {
     sendCommand({
       type: "movement",
@@ -63,70 +17,60 @@ function ControlPanel() {
   const handleWeaponAction = () => {
     sendCommand({
       type: "weapon",
-      active: true
+      speed: 100  // Full speed when activated
     });
-    console.log("Weapon fired!");
   };
 
   const toggleSafety = () => {
-    setSafetyOn(!safetyOn);
     sendCommand({
       type: "safety",
-      enabled: !safetyOn
+      enabled: !botStatus.safety
     });
-  };
-
-  const toggleFlipControls = () => {
-    setFlipControls(!flipControls);
-    // This can be handled locally since it's just UI
   };
 
   const togglePower = () => {
-    setPower(!killPower);
     sendCommand({
       type: "power",
-      enabled: !killPower
+      enabled: !botStatus.power
     });
   };
 
-  // Keep your original JSX structure
   return (
     <div className="control-panel">
       <h2 className="control-panel-header">Control Panel</h2>
       <div className="panel-content">
         {/* Joystick */}
-        <Joystick onUpdate={handleJoystickUpdate} />
+        <Joystick 
+          onUpdate={handleJoystickUpdate} 
+          disabled={!connected || !botStatus.power || botStatus.safety}
+        />
 
         {/* Button Group */}
-        <div
-          style={{ display: "flex", alignItems: "center", marginLeft: "20px" }}
-        >
+        <div style={{ display: "flex", alignItems: "center", marginLeft: "20px" }}>
           {/* Attack Button */}
           <div className="button2">
-            <a onClick={handleWeaponAction}>Attack</a>
+            <a 
+              onClick={handleWeaponAction}
+              className={(!connected || !botStatus.power || botStatus.safety) ? 'disabled' : ''}
+            >
+              Attack
+            </a>
           </div>
 
-          {/* Stacked buttons (Safety and Flip Controls) */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              marginLeft: "20px",
-            }}
-          >
+          {/* Stacked buttons */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            marginLeft: "20px",
+          }}>
             <div className="button" style={{ marginTop: "10px" }}>
               <a onClick={togglePower}>
-                {killPower ? "Power: Off" : "Power: On"}
+                Power: {botStatus.power ? 'On' : 'Off'}
               </a>
             </div>
             <div className="button">
               <a onClick={toggleSafety}>
-                {safetyOn ? "Disable Safety" : "Enable Safety"}
-              </a>
-            </div>
-            <div className="button" style={{ marginTop: "10px" }}>
-              <a onClick={toggleFlipControls}>
-                {flipControls ? "Flip Controls: Off" : "Flip Controls: On"}
+                {botStatus.safety ? 'Disable Safety' : 'Enable Safety'}
               </a>
             </div>
           </div>
