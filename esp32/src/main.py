@@ -8,6 +8,7 @@ import asyncio_ws
 # WiFi Configuration
 WIFI_SSID = "SpectrumSetup-CA93"
 WIFI_PASSWORD = "silverpiano110"
+WS_SERVER = "ws://192.168.1.100:3000/esp32"
 
 # Pin Definitions for Motors (Using same GPIO pins as Arduino version)
 MOTOR_LEFT_FWD = 14    # GPIO14 - Left drive motor forward
