@@ -22,62 +22,55 @@ const clients = new Set();
 let esp32Client = null;
 
 // WebSocket connection handler
-wss.on('connection', (ws, req) => {
-    const clientType = req.url;
-    console.log(`New client connected: ${clientType}`);
-
-    if (clientType === '/esp32') {
-        // Handle ESP32 connection
-        if (esp32Client) {
-            esp32Client.close();
-        }
-        esp32Client = ws;
-        console.log('ESP32 connected');
-
-        // Send initial status to all web clients
-        broadcastStatus({ connected: true });
-    } else {
-        // Handle web client connection
-        clients.add(ws);
-        console.log('Web client connected');
+// Modified WebSocket message handler
+ws.on('message', (message) => {
+    try {
+        const data = JSON.parse(message);
         
-        // Send current ESP32 connection status
-        ws.send(JSON.stringify({
-            type: 'status',
-            connected: esp32Client !== null && esp32Client.readyState === WebSocket.OPEN
-        }));
-    }
-
-    // Handle incoming messages
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            
-            if (clientType === '/esp32') {
-                // Forward ESP32 status updates to all web clients
-                broadcastToWebClients(data);
-            } else {
-                // Forward web client commands to ESP32
-                if (esp32Client && esp32Client.readyState === WebSocket.OPEN) {
-                    esp32Client.send(JSON.stringify(data));
-                }
-            }
-        } catch (error) {
-            console.error('Error processing message:', error);
-        }
-    });
-
-    // Handle client disconnection
-    ws.on('close', () => {
         if (clientType === '/esp32') {
-            esp32Client = null;
-            console.log('ESP32 disconnected');
-            broadcastStatus({ connected: false });
+            // Convert ESP32 status to frontend format
+            const status = {
+                connected: true,
+                botStatus: {
+                    power: data.power,
+                    safety: data.safety,
+                    weaponSpeed: Math.round((data.weaponSpeed / 1023) * 100)
+                }
+            };
+            broadcastToWebClients(status);
         } else {
-            clients.delete(ws);
-            console.log('Web client disconnected');
+            // Process web client commands
+            const processedCmd = processCommand(data);
+            if(processedCmd && esp32Client) {
+                esp32Client.send(JSON.stringify(processedCmd));
+            }
         }
-    });
+    } catch (error) { /* ... */ }
+});
+
+function processCommand(frontendCmd) {
+    // Convert joystick to tank controls
+    if(frontendCmd.type === 'movement') {
+        const left = frontendCmd.y + frontendCmd.x;
+        const right = frontendCmd.y - frontendCmd.x;
+        return {
+            type: 'motor',
+            left: Math.round((left / 100) * 1023),
+            right: Math.round((right / 100) * 1023)
+        };
+    }
+    
+    // Handle weapon toggle
+    if(frontendCmd.type === 'weapon') {
+        return {
+            type: 'weapon',
+            speed: frontendCmd.speed === 100 ? 1023 : 0
+        };
+    }
+    
+    // Forward state toggles directly
+    return frontendCmd;
+}
 
     // Handle errors
     ws.on('error', (error) => {

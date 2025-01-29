@@ -157,6 +157,17 @@ class BattleBot:
             "power": self.power_enabled,
             "weaponSpeed": self.current_weapon_speed
         })
+    
+            # Add safety layer to all commands
+    def set_motors(self, left_speed, right_speed):
+        if self.safety_enabled or not self.power_enabled:
+            self.stop_drive_motors()
+            return
+
+    def set_weapon(self, speed):
+        if self.safety_enabled or not self.power_enabled:
+            self.stop_weapon()
+            return
 
 async def handle_websocket(websocket, bot):
     """Handle WebSocket connections and messages"""
@@ -239,18 +250,25 @@ async def main():
     # Initialize battle bot
     bot = BattleBot()
     
-    # Start WebSocket server
-    server = await asyncio_ws.serve(
-        lambda ws: handle_websocket(ws, bot),
-        "0.0.0.0",
-        81
-    )
-    
-    # Start watchdog
-    asyncio.create_task(watchdog(bot))
-    
-    # Run forever
-    await asyncio.gather(server.wait_closed())
+    while True:
+        try:
+            async with asyncio_ws.ClientSession(f'ws://{BACKEND_IP}:3000/esp32') as ws:
+                print("Connected to backend")
+                bot.status_led.on()
+                await ws.send(bot.get_status())
+                
+                async for message in ws:
+                    data = json.loads(message)
+                    # Process commands from backend
+                    if data.get('type') == 'motor':
+                        bot.set_motors(data['left'], data['right'])
+                    elif data.get('type') == 'weapon':
+                        bot.set_weapon(data['speed'])
+                    # ... other command handling
+                
+        except Exception as e:
+            print("Connection failed, retrying...")
+            await asyncio.sleep(5)
 
 # Start the event loop
 asyncio.run(main())
